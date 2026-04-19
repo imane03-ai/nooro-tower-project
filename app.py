@@ -18,10 +18,17 @@ de la tour de refroidissement, incluant l'impact des stratégies d'économie d'e
 @st.cache_resource
 def load_model():
     model = xgb.XGBRegressor()
-    # Assurez-vous que le fichier .json est dans le même dossier sur GitHub
-    model.load_model('modele_nooro_final.json')
-    return model
+    # On force le chemin pour être sûr qu'il le trouve à la racine
+    import os
+    model_path = os.path.join(os.getcwd(), 'modele_nooro_final.json')
+    
+    if os.path.exists(model_path):
+        model.load_model(model_path)
+        return model
+    else:
+        return None
 
+model_ai = load_model()
 try:
     model_ai = load_model()
     model_loaded = True

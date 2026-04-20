@@ -62,30 +62,36 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
     df['time'] = pd.to_datetime(df['time'])
     
-    # Calculs techniques
-    df['Economie_Eau_m3'] = (df['L'] * 0.0005) * (10/60) # Gain Drift Eliminator
-    df['Delta_T'] = df['T_w_in'] - df['T_w_out_reel']
+    # --- CALCULS THERMODYNAMIQUES ---
+    # 1. Range (Saut thermique) : Tw_in - Tw_out
+    df['Range'] = df['T_w_in'] - df['T_w_out_reel']
     
-    # Affichage des KPIs
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Delta T Moyen", f"{round(df['Delta_T'].mean(), 2)} °C")
-    col2.metric("Économie d'Eau Totale", f"{round(df['Economie_Eau_m3'].sum(), 2)} m³")
-    col3.metric("Nombre de relevés", len(df))
+    # 2. Approach : Tw_out - Twb (Température bulbe humide)
+    # Note: Twb est estimée ici ou calculée via CoolProp si disponible
+    # Pour simplifier dans l'immédiat, nous utilisons une approximation de Twb
+    df['Approach'] = df['T_w_out_reel'] - df['T_db'] * (df['HR']/100)**(1/7) # Approximation simple
 
-    # Graphiques
-    st.subheader("📈 Visualisation des Performances Historiques")
+    # 3. Efficacité (%) : Range / (Range + Approach)
+    df['Efficacite'] = (df['Range'] / (df['Range'] + df['Approach'])) * 100
     
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
-                        subplot_titles=("Suivi des Températures", "Économie d'eau cumulée (m³)"))
-
-    fig.add_trace(go.Scatter(x=df['time'], y=df['T_w_in'], name="T_w_in", line=dict(color='red')), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_reel'], name="T_w_out_réel", line=dict(color='blue')), row=1, col=1)
+    # 4. Pertes par Évaporation (m3/h) : Approximativement 0.00153 * L * Range * 0.001
+    # Formule standard : 0.00085 * 1.8 * Range * Débit_eau
+    df['Evaporation_m3_h'] = 0.00153 * df['L'] * df['Range'] * 0.001 
     
-    df['Economie_Cumulee'] = df['Economie_Eau_m3'].cumsum()
-    fig.add_trace(go.Scatter(x=df['time'], y=df['Economie_Cumulee'], name="Gain Drift Eliminator", fill='tozeroy'), row=2, col=1)
+    # --- AFFICHAGE DES INDICATEURS (KPIs) ---
+    st.subheader("📊 Indicateurs de Performance Moyens")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Range Moyen", f"{round(df['Range'].mean(), 2)} °C")
+    col2.metric("Approach Moyen", f"{round(df['Approach'].mean(), 2)} °C")
+    col3.metric("Efficacité", f"{round(df['Efficacite'].mean(), 1)} %")
+    col4.metric("Évaporation Totale", f"{round(df['Evaporation_m3_h'].sum() * (10/60), 2)} m³")
 
-    fig.update_layout(height=700, template="plotly_white")
-    st.plotly_chart(fig, use_container_width=True)
+    # --- GRAPHIQUE DES PERTES ---
+    st.subheader("💧 Analyse des Pertes d'Eau")
+    fig_pertes = go.Figure()
+    fig_pertes.add_trace(go.Scatter(x=df['time'], y=df['Evaporation_m3_h'], name="Pertes Evaporation", fill='tozeroy'))
+    fig_pertes.update_layout(title="Débit d'évaporation au cours du temps (m³/h)", template="plotly_white")
+    st.plotly_chart(fig_pertes, use_container_width=True)
 
 else:
     st.info("👋 Veuillez charger votre fichier Excel dans la barre latérale pour démarrer l'analyse.")

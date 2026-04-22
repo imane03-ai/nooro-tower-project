@@ -89,6 +89,15 @@ if uploaded_file is not None:
     df['Erreur'] = df['T_w_out_reel'] - df['T_w_out_predite']
     MAE = df['Erreur'].abs().mean()
     st.metric("Erreur Moyenne du Modèle (MAE)", f"{round(MAE, 2)} °C")
+    # À ajouter sous votre graphique de comparaison
+    st.subheader("📊 Distribution de l'Erreur de Prédiction")
+    df['Erreur_Absolue'] = (df['T_w_out_reel'] - df['T_w_out_predite']).abs()
+
+fig_err = px.histogram(df, x=(df['T_w_out_reel'] - df['T_w_out_predite']), 
+                       nbins=50, title="Répartition des écarts (Réel - Prédit)",
+                       labels={'x': 'Écart en °C'},
+                       color_discrete_sequence=['indianred'])
+st.plotly_chart(fig_err, use_container_width=True)
 
     # Graphique Évaporation par jour
     st.subheader("💧 Évaporation Totale Cumulée par Jour (m³)")

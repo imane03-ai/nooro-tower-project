@@ -3,112 +3,85 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import plotly.express as px
+import os
 
-# --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="NOORo I - Cooling Tower Monitor", layout="wide")
+# Configuration de la page
+st.set_page_config(page_title="NOORo I Tower Tools", layout="wide")
 
-st.title("🛡️ Dashboard de Performance : Tour de Refroidissement NOORo I")
-st.markdown("""
-Cette application permet le suivi thermodynamique en temps réel et la prédiction de performance 
-de la tour de refroidissement, incluant l'impact des stratégies d'économie d'eau.
-""")
+st.title("🛠️ Outil d'Analyse Thermodynamique : NOORo I")
 
 # --- CHARGEMENT DU MODÈLE IA ---
 @st.cache_resource
 def load_model():
     model = xgb.XGBRegressor()
-    # On force le chemin pour être sûr qu'il le trouve à la racine
-    import os
     model_path = os.path.join(os.getcwd(), 'modele_nooro_final.json')
-    
     if os.path.exists(model_path):
         model.load_model(model_path)
         return model
-    else:
-        return None
+    return None
 
 model_ai = load_model()
-try:
-    model_ai = load_model()
-    model_loaded = True
-except:
-    model_loaded = False
-    st.warning("⚠️ Modèle IA non trouvé. Veuillez uploader 'modele_nooro_final.json' sur GitHub.")
 
-# --- BARRE LATÉRALE : INTERFACE D'UPLOAD ET PRÉDICTION ---
+# --- BARRE LATÉRALE ---
 st.sidebar.header("📥 Données de la Centrale")
 uploaded_file = st.sidebar.file_uploader("Charger le fichier Excel (10 min data)", type=['xlsx'])
 
-st.sidebar.markdown("---")
-st.sidebar.header("🔮 Prédiction pour Demain")
-input_tw_in = st.sidebar.slider("Température entrée eau (T_w_in)", 30.0, 55.0, 45.0)
-input_tdb = st.sidebar.slider("Température ambiante (T_db)", 10.0, 50.0, 38.0)
-input_hr = st.sidebar.slider("Humidité Relative (HR %)", 5, 100, 15)
-input_l = st.sidebar.number_input("Débit d'eau (L)", value=1200)
-input_g = st.sidebar.number_input("Débit d'air (G)", value=800)
-
-if st.sidebar.button("Prédire la performance"):
-    if model_loaded:
-        features = pd.DataFrame([[input_tw_in, input_l, input_g, input_hr, input_tdb]], 
-                                columns=['T_w_in', 'L', 'G', 'HR', 'T_db'])
-        prediction = model_ai.predict(features)[0]
-        st.sidebar.success(f"Température de sortie prédite : {round(prediction, 2)} °C")
-    else:
-        st.sidebar.error("Erreur : Modèle non chargé.")
-
-# --- CORPS PRINCIPAL : ANALYSE DES DONNÉES ---
+# --- CALCULS ET ANALYSE ---
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
     df['time'] = pd.to_datetime(df['time'])
     
-    # --- CALCULS THERMODYNAMIQUES ---
-if uploaded_file is not None:
-    df = pd.read_excel(uploaded_file)
-    df['time'] = pd.to_datetime(df['time'])
-    
-    # --- 1. CALCULS TOUTES LES 10 MIN (Pas de temps de l'Excel) ---
-    # Delta T (anciennement Range)
+    # 1. Calculs au pas de 10 min
     df['Delta T'] = df['T_w_in'] - df['T_w_out_reel']
     
-    # Calcul de l'Approche
-    # Twb estimé par la formule de Stull (précise pour les pressions standards)
+    # Estimation Twb (Stull) pour l'Approche
     T = df['T_db']
     Rh = df['HR']
     df['Twb'] = T * np.arctan(0.151977 * (Rh + 8.313659)**0.5) + np.arctan(T + Rh) - np.arctan(Rh - 1.676331) + 0.00391838 * (Rh)**1.5 * np.arctan(0.023101 * Rh) - 4.686035
     
     df['Approche'] = df['T_w_out_reel'] - df['Twb']
-    
-    # Efficacité (%)
     df['Efficacite'] = (df['Delta T'] / (df['Delta T'] + df['Approche'])) * 100
-    
-    # Évaporation instantanée (m3/h)
     df['Evap_m3_h'] = 0.00153 * df['L'] * df['Delta T'] * 0.001
 
-    # --- 2. CALCUL DE L'ÉVAPORATION MOYENNE JOURNALIÈRE ---
-    # On groupe par jour et on calcule la moyenne du débit d'évaporation
-    df_daily = df.set_index('time').resample('D')['Evap_m3_h'].mean().reset_index()
-    df_daily.columns = ['Jour', 'Evap_Moyenne_m3_h']
+    # 2. Moyennes Journalières
+    df_daily = df.set_index('time').resample('D').agg({
+        'Delta T': 'mean',
+        'Approche': 'mean',
+        'Efficacite': 'mean',
+        'Evap_m3_h': 'mean'
+    }).reset_index()
 
-    # --- 3. AFFICHAGE DES RÉSULTATS ---
-    st.header("📈 Analyse Détaillée de la Tour")
-    
-    # Tableau des indicateurs 10 min (Aperçu)
-    st.subheader("⏱️ Indicateurs au pas de 10 min")
-    st.dataframe(df[['time', 'Delta T', 'Approche', 'Efficacite', 'Evap_m3_h']].tail(10))
+    # --- AFFICHAGE ---
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Delta T Moyen", f"{round(df['Delta T'].mean(), 2)} °C")
+    col2.metric("Approche Moyenne", f"{round(df['Approche'].mean(), 2)} °C")
+    col3.metric("Efficacité Moyenne", f"{round(df['Efficacite'].mean(), 1)} %")
+    col4.metric("Évaporation Totale", f"{round(df['Evap_m3_h'].sum()*(10/60), 1)} m³")
 
-    # Graphique de l'Évaporation Moyenne par Jour
-    st.subheader("📅 Évaporation Moyenne Journalière (m³/h)")
-    fig_daily = px.bar(df_daily, x='Jour', y='Evap_Moyenne_m3_h', 
-                       title="Consommation moyenne d'eau par jour",
-                       labels={'Evap_Moyenne_m3_h': 'Moyenne m³/h'})
-    st.plotly_chart(fig_daily, use_container_width=True)
+    # Graphique 1 : Delta T & Approche
+    st.subheader("🌡️ Évolution des Températures (10 min)")
+    fig1 = go.Figure()
+    fig1.add_trace(go.Scatter(x=df['time'], y=df['Delta T'], name="Delta T", line=dict(color='firebrick')))
+    fig1.add_trace(go.Scatter(x=df['time'], y=df['Approche'], name="Approche", line=dict(color='royalblue')))
+    st.plotly_chart(fig1, use_container_width=True)
 
-    # Graphique Delta T vs Approche
-    st.subheader("🌡️ Delta T et Approche (10 min)")
-    fig_temp = go.Figure()
-    fig_temp.add_trace(go.Scatter(x=df['time'], y=df['Delta T'], name="Delta T (Saut thermique)"))
-    fig_temp.add_trace(go.Scatter(x=df['time'], y=df['Approche'], name="Approche (Écart limite)"))
-    fig_temp.update_layout(yaxis_title="Température (°C)", template="plotly_white")
-    st.plotly_chart(fig_temp, use_container_width=True)
+    # Graphique 2 : Évaporation Journalière
+    st.subheader("📅 Consommation d'eau moyenne par jour")
+    fig2 = px.bar(df_daily, x='time', y='Evap_m3_h', color='Evap_m3_h',
+                 labels={'Evap_m3_h': 'Débit moyen (m³/h)', 'time': 'Date'})
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # Bouton d'exportation
+    st.sidebar.markdown("---")
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.sidebar.download_button("📥 Télécharger les calculs (.CSV)", csv, "resultats_nooro.csv", "text/csv")
+
+else:
+    st.info("👋 Veuillez charger votre fichier Excel dans la barre latérale pour activer l'outil.")
+
+# --- SECTION PRÉDICTION IA (Si modèle chargé) ---
+if model_ai:
+    st.sidebar.markdown("---")
+    st.sidebar.header("🔮 Prédiction IA")
+    # (Ajoutez ici vos curseurs de prédiction si vous voulez les garder)

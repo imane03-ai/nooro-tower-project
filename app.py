@@ -38,7 +38,7 @@ if uploaded_file is not None:
        features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
             
        # ASTUCE : On convertit en valeurs brutes (numpy) pour éviter l'erreur de noms de colonnes
-         df['T_w_out_predite'] = model_ai.predict(features.values)
+       df['T_w_out_predite'] = model_ai.predict(features.values)
             
             st.sidebar.success("✅ Prédictions IA générées")
         except Exception as e:

@@ -63,7 +63,7 @@ if uploaded_file is not None:
     df['time'] = pd.to_datetime(df['time'])
     
     # --- CALCULS THERMODYNAMIQUES ---
-   if uploaded_file is not None:
+if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
     df['time'] = pd.to_datetime(df['time'])
     

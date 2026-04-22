@@ -111,6 +111,5 @@ st.write(df[['time', 'T_w_out_reel', 'T_w_out_predite', 'Delta T', 'Approche', '
     # Bouton de téléchargement
 csv = df.to_csv(index=False).encode('utf-8')
 st.download_button("📥 Télécharger le fichier complet avec calculs et prédictions", csv, "audit_nooro_complet.csv", "text/csv")
-
-   else:
+else:
  st.info("Veuillez charger le fichier Excel dans la barre latérale pour démarrer l'audit.")

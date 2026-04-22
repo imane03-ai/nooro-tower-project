@@ -31,12 +31,18 @@ if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
     df['time'] = pd.to_datetime(df['time'])
     
-    # --- 1. PRÉDICTION IA POUR CHAQUE LIGNE ---
-    if model_ai:
-        # On prépare les données pour l'IA (doit correspondre à l'ordre de l'entraînement)
-        features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
-        df['T_w_out_predite'] = model_ai.predict(features)
-        st.sidebar.success("✅ Prédictions IA générées pour tout le fichier")
+# --- 1. PRÉDICTION IA POUR CHAQUE LIGNE ---
+ if model_ai:
+    try:
+       # On sélectionne les colonnes nécessaires
+       features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
+            
+       # ASTUCE : On convertit en valeurs brutes (numpy) pour éviter l'erreur de noms de colonnes
+         df['T_w_out_predite'] = model_ai.predict(features.values)
+            
+            st.sidebar.success("✅ Prédictions IA générées")
+        except Exception as e:
+            st.sidebar.error(f"Erreur colonnes : Vérifiez que votre Excel contient bien T_w_in, T_db, HR, L, G")
     
     # --- 2. CALCULS THERMODYNAMIQUES (10 MIN) ---
     # Delta T (Saut thermique)

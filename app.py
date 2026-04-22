@@ -32,7 +32,7 @@ if uploaded_file is not None:
     df['time'] = pd.to_datetime(df['time'])
     
 # --- 1. PRÉDICTION IA POUR CHAQUE LIGNE ---
- if model_ai:
+    if model_ai:
     try:
        # On sélectionne les colonnes nécessaires
        features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]

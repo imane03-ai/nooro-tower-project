@@ -100,9 +100,9 @@ fig_err = px.histogram(df, x=(df['T_w_out_reel'] - df['T_w_out_predite']),
 st.plotly_chart(fig_err, use_container_width=True)
 
     # Graphique Évaporation par jour
-    st.subheader("💧 Évaporation Totale Cumulée par Jour (m³)")
-    fig_evap = px.bar(df_daily, x='time', y='Evap_m3_h', color_continuous_scale='Blues')
-    st.plotly_chart(fig_evap, use_container_width=True)
+st.subheader("💧 Évaporation Totale Cumulée par Jour (m³)")
+fig_evap = px.bar(df_daily, x='time', y='Evap_m3_h', color_continuous_scale='Blues')
+st.plotly_chart(fig_evap, use_container_width=True)
 
     # Tableau de données avec toutes les colonnes calculées
     st.subheader("📋 Tableau des résultats calculés (Aperçu)")

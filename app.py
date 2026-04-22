@@ -94,19 +94,32 @@ if uploaded_file is not None:
             col_a, col_b = st.columns(2)
             with col_a:
                 st.write(f"**Performance Thermique :**")
-                if 8 <= dt <= 10:
+                # --- 5. SECTION DIAGNOSTIC INTELLIGENT ---
+    st.header("📝 Diagnostic et Commentaires d'Expert")
+    
+    for i in range(len(df_daily)):
+        # On extrait les valeurs scalaires proprement
+        dt = float(df_daily.loc[i, 'Delta T'])
+        evap = float(df_daily.loc[i, 'Evap_m3_h'])
+        date_label = df_daily.loc[i, 'time'].strftime('%d/%m/%Y')
+        
+        with st.expander(f"Analyse du {date_label}"):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.write(f"**Performance Thermique :**")
+                # Maintenant dt est un float, la comparaison fonctionne :
+                if 8.0 <= dt <= 10.0:
                     st.success(f"✅ Delta T optimal : {round(dt,2)}°C. Échange conforme au design.")
-                elif dt < 8:
+                elif dt < 8.0:
                     st.error(f"🚨 Delta T faible : {round(dt,2)}°C. Les 8 ventilateurs ne suffisent pas à évacuer la charge (Air trop chaud).")
                 else:
                     st.warning(f"🌡️ Delta T élevé : {round(dt,2)}°C. Refroidissement intense dû à un air très sec.")
             
             with col_b:
                 st.write(f"**Analyse de l'eau :**")
-                # Seuil basé sur 1.5% du débit circulant (standard industriel)
                 seuil_critique = L_FIXE * 0.015
                 if evap > seuil_critique:
-                    st.error(f"💧 Perte par évaporation élevée : {round(evap,1)} m³/h. Cause : conditions climatiques arides.")
+                    st.error(f"💧 Perte par évaporation élevée : {round(evap,1)} m³/h.")
                 else:
                     st.info(f"💧 Évaporation normale : {round(evap,1)} m³/h.")
 

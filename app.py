@@ -4,6 +4,7 @@ import numpy as np
 import xgboost as xgb
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.express as px
 
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="NOORo I - Cooling Tower Monitor", layout="wide")

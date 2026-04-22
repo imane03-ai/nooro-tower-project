@@ -86,9 +86,9 @@ if uploaded_file is not None:
         fig_comp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_predite'], name="Prédit (IA)", line=dict(color='orange', dash='dash')))
     st.plotly_chart(fig_comp, use_container_width=True)
     # À ajouter dans votre code après les prédictions
-   df['Erreur'] = df['T_w_out_reel'] - df['T_w_out_predite']
-   MAE = df['Erreur'].abs().mean()
-   st.metric("Erreur Moyenne du Modèle (MAE)", f"{round(MAE, 2)} °C")
+    df['Erreur'] = df['T_w_out_reel'] - df['T_w_out_predite']
+    MAE = df['Erreur'].abs().mean()
+    st.metric("Erreur Moyenne du Modèle (MAE)", f"{round(MAE, 2)} °C")
 
     # Graphique Évaporation par jour
     st.subheader("💧 Évaporation Totale Cumulée par Jour (m³)")

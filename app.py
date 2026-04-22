@@ -63,35 +63,51 @@ if uploaded_file is not None:
     df['time'] = pd.to_datetime(df['time'])
     
     # --- CALCULS THERMODYNAMIQUES ---
-    # 1. Range (Saut thermique) : Tw_in - Tw_out
-    df['Range'] = df['T_w_in'] - df['T_w_out_reel']
+   if uploaded_file is not None:
+    df = pd.read_excel(uploaded_file)
+    df['time'] = pd.to_datetime(df['time'])
     
-    # 2. Approach : Tw_out - Twb (Température bulbe humide)
-    # Note: Twb est estimée ici ou calculée via CoolProp si disponible
-    # Pour simplifier dans l'immédiat, nous utilisons une approximation de Twb
-    df['Approach'] = df['T_w_out_reel'] - df['T_db'] * (df['HR']/100)**(1/7) # Approximation simple
-
-    # 3. Efficacité (%) : Range / (Range + Approach)
-    df['Efficacite'] = (df['Range'] / (df['Range'] + df['Approach'])) * 100
+    # --- 1. CALCULS TOUTES LES 10 MIN (Pas de temps de l'Excel) ---
+    # Delta T (anciennement Range)
+    df['Delta T'] = df['T_w_in'] - df['T_w_out_reel']
     
-    # 4. Pertes par Évaporation (m3/h) : Approximativement 0.00153 * L * Range * 0.001
-    # Formule standard : 0.00085 * 1.8 * Range * Débit_eau
-    df['Evaporation_m3_h'] = 0.00153 * df['L'] * df['Range'] * 0.001 
+    # Calcul de l'Approche
+    # Twb estimé par la formule de Stull (précise pour les pressions standards)
+    T = df['T_db']
+    Rh = df['HR']
+    df['Twb'] = T * np.arctan(0.151977 * (Rh + 8.313659)**0.5) + np.arctan(T + Rh) - np.arctan(Rh - 1.676331) + 0.00391838 * (Rh)**1.5 * np.arctan(0.023101 * Rh) - 4.686035
     
-    # --- AFFICHAGE DES INDICATEURS (KPIs) ---
-    st.subheader("📊 Indicateurs de Performance Moyens")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Range Moyen", f"{round(df['Range'].mean(), 2)} °C")
-    col2.metric("Approach Moyen", f"{round(df['Approach'].mean(), 2)} °C")
-    col3.metric("Efficacité", f"{round(df['Efficacite'].mean(), 1)} %")
-    col4.metric("Évaporation Totale", f"{round(df['Evaporation_m3_h'].sum() * (10/60), 2)} m³")
+    df['Approche'] = df['T_w_out_reel'] - df['Twb']
+    
+    # Efficacité (%)
+    df['Efficacite'] = (df['Delta T'] / (df['Delta T'] + df['Approche'])) * 100
+    
+    # Évaporation instantanée (m3/h)
+    df['Evap_m3_h'] = 0.00153 * df['L'] * df['Delta T'] * 0.001
 
-    # --- GRAPHIQUE DES PERTES ---
-    st.subheader("💧 Analyse des Pertes d'Eau")
-    fig_pertes = go.Figure()
-    fig_pertes.add_trace(go.Scatter(x=df['time'], y=df['Evaporation_m3_h'], name="Pertes Evaporation", fill='tozeroy'))
-    fig_pertes.update_layout(title="Débit d'évaporation au cours du temps (m³/h)", template="plotly_white")
-    st.plotly_chart(fig_pertes, use_container_width=True)
+    # --- 2. CALCUL DE L'ÉVAPORATION MOYENNE JOURNALIÈRE ---
+    # On groupe par jour et on calcule la moyenne du débit d'évaporation
+    df_daily = df.set_index('time').resample('D')['Evap_m3_h'].mean().reset_index()
+    df_daily.columns = ['Jour', 'Evap_Moyenne_m3_h']
 
-else:
-    st.info("👋 Veuillez charger votre fichier Excel dans la barre latérale pour démarrer l'analyse.")
+    # --- 3. AFFICHAGE DES RÉSULTATS ---
+    st.header("📈 Analyse Détaillée de la Tour")
+    
+    # Tableau des indicateurs 10 min (Aperçu)
+    st.subheader("⏱️ Indicateurs au pas de 10 min")
+    st.dataframe(df[['time', 'Delta T', 'Approche', 'Efficacite', 'Evap_m3_h']].tail(10))
+
+    # Graphique de l'Évaporation Moyenne par Jour
+    st.subheader("📅 Évaporation Moyenne Journalière (m³/h)")
+    fig_daily = px.bar(df_daily, x='Jour', y='Evap_Moyenne_m3_h', 
+                       title="Consommation moyenne d'eau par jour",
+                       labels={'Evap_Moyenne_m3_h': 'Moyenne m³/h'})
+    st.plotly_chart(fig_daily, use_container_width=True)
+
+    # Graphique Delta T vs Approche
+    st.subheader("🌡️ Delta T et Approche (10 min)")
+    fig_temp = go.Figure()
+    fig_temp.add_trace(go.Scatter(x=df['time'], y=df['Delta T'], name="Delta T (Saut thermique)"))
+    fig_temp.add_trace(go.Scatter(x=df['time'], y=df['Approche'], name="Approche (Écart limite)"))
+    fig_temp.update_layout(yaxis_title="Température (°C)", template="plotly_white")
+    st.plotly_chart(fig_temp, use_container_width=True)

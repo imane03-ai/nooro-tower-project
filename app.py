@@ -5,17 +5,33 @@ import xgboost as xgb
 import plotly.graph_objects as go
 import plotly.express as px
 import os
+from datetime import datetime
 
-# --- CONFIGURATION DE L'INTERFACE ---
-st.set_page_config(page_title="NOORo I Tower Expert", layout="wide")
-st.title("🚀 Système Expert d'Audit Thermique - NOORo I")
-st.markdown("---")
+# --- CONFIGURATION ---
+st.set_page_config(page_title="NOORo I Live Monitor", layout="wide")
 
-# --- CHARGEMENT DU MODÈLE IA ---
+# --- PARAMÈTRES FIXES NOORo I ---
+L_FIXE = 23600  # m3/h
+NB_VENTILATEURS = 8
+
+# --- FONCTION DE CONNEXION AUTOMATIQUE (SIMULATION API/SCADA) ---
+def get_live_data():
+    """
+    Dans un système réel, cette fonction se connecte à votre base de données SQL 
+    ou à votre système SCADA pour récupérer les données sans fichier Excel.
+    """
+    # Pour le moment, l'outil cherche un fichier 'live_data.xlsx' sur votre GitHub
+    # qui se mettrait à jour automatiquement via un script externe.
+    path = "live_data.xlsx" 
+    if os.path.exists(path):
+        return pd.read_excel(path)
+    else:
+        return None
+
+# --- CHARGEMENT IA ---
 @st.cache_resource
 def load_model():
     model = xgb.XGBRegressor()
-    # Assurez-vous que le nom du fichier correspond à celui sur votre GitHub
     path = os.path.join(os.getcwd(), 'modele_nooro_final.json')
     if os.path.exists(path):
         model.load_model(path)
@@ -24,123 +40,72 @@ def load_model():
 
 model_ai = load_model()
 
-# --- PARAMÈTRES FIXES DE LA CENTRALE ---
-L_FIXE = 23600  # Débit d'eau constant (m3/h)
-NB_VENTILATEURS = 8
-CP_EAU = 4.186  # kJ/kg.K
+# --- INTERFACE ---
+st.title("🛰️ Système de Monitoring en Temps Réel - NOORo I")
+st.info(f"Connexion établie : Débit d'eau fixé à **{L_FIXE} m³/h** | **{NB_VENTILATEURS}** Ventilateurs en service.")
 
-# --- IMPORTATION DES DONNÉES ---
-st.sidebar.header("📥 Données d'Exploitation")
-uploaded_file = st.sidebar.file_uploader("Charger le fichier Excel (Pas de 10 min)", type=['xlsx'])
+# Récupération automatique
+df = get_live_data()
 
-if uploaded_file is not None:
-    df = pd.read_excel(uploaded_file)
+if df is not None:
     df['time'] = pd.to_datetime(df['time'])
-    df = df.sort_values('time')
-
-    # --- 1. MOTEUR DE CALCUL THERMODYNAMIQUE ---
-    # Delta T (Nommé selon votre demande)
+    
+    # --- CALCULS THERMODYNAMIQUES ---
     df['Delta T'] = df['T_w_in'] - df['T_w_out_reel']
     
-    # Température du bulbe humide (Twb) - Formule de Stull
+    # Twb (Stull)
     T, Rh = df['T_db'], df['HR']
     df['Twb'] = T * np.arctan(0.151977 * (Rh + 8.313659)**0.5) + np.arctan(T + Rh) - np.arctan(Rh - 1.676331) + 0.00391838 * (Rh)**1.5 * np.arctan(0.023101 * Rh) - 4.686035
     
-    # Approche et Efficacité
     df['Approche'] = df['T_w_out_reel'] - df['Twb']
     df['Efficacite'] = (df['Delta T'] / (df['Delta T'] + df['Approche'])) * 100
     
-    # Chaleur Rejetée (MW)
-    df['Chaleur_MW'] = (L_FIXE * CP_EAU * df['Delta T']) / 3600
-    
-    # Perte par Évaporation (m3/h)
-    df['Evap_m3_h'] = 0.00153 * L_FIXE * df['Delta T'] * 0.001
+    # CALCUL ÉVAPORATION (Format 324 m3/h)
+    # Formule : 0.00153 * L * DeltaT
+    df['Evap_m3_h'] = 0.00153 * L_FIXE * df['Delta T']
 
-    # --- 2. PRÉDICTION IA ---
-    if model_ai:
-        try:
-            # Utilisation des valeurs brutes pour éviter les erreurs de noms de colonnes
-            features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
-            df['T_w_out_predite'] = model_ai.predict(features.values)
-        except:
-            st.sidebar.error("⚠️ Erreur : Colonnes manquantes pour l'IA (T_w_in, T_db, HR, L, G)")
-
-    # --- 3. SYNTHÈSE JOURNALIÈRE ---
+    # Moyennes journalières
     df_daily = df.set_index('time').resample('D').agg({
         'Delta T': 'mean',
-        'Approche': 'mean',
-        'Efficacite': 'mean',
         'Evap_m3_h': 'mean',
-        'Chaleur_MW': 'mean'
+        'Approche': 'mean'
     }).reset_index()
 
-    # --- 4. AFFICHAGE DU DASHBOARD ---
-    # KPIs Globaux
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Efficacité Moyenne", f"{round(df['Efficacite'].mean(), 1)} %")
-    k2.metric("Chaleur Totale (Moy)", f"{round(df['Chaleur_MW'].mean(), 2)} MW")
-    k3.metric("Delta T Moyen", f"{round(df['Delta T'].mean(), 2)} °C")
-    k4.metric("Eau évaporée (Moy)", f"{round(df['Evap_m3_h'].mean(), 1)} m³/h")
+    # --- KPIs TEMPS RÉEL (Dernière valeur connue) ---
+    last_val = df.iloc[-1]
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Delta T Actuel", f"{round(last_val['Delta T'], 2)} °C")
+    m2.metric("Évaporation Actuelle", f"{round(last_val['Evap_m3_h'], 1)} m³/h")
+    m3.metric("Efficacité", f"{round(last_val['Efficacite'], 1)} %")
+    m4.metric("Approche", f"{round(last_val['Approche'], 2)} °C")
 
-    # --- 5. SECTION DIAGNOSTIC INTELLIGENT ---
-    st.header("📝 Diagnostic et Commentaires d'Expert")
-    
-    for index, row in df_daily.iterrows():
-        dt = row['Delta T']
-        evap = row['Evap_m3_h']
-        date_label = row['time'].strftime('%d/%m/%Y')
-        
-        with st.expander(f"Analyse du {date_label}"):
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.write(f"**Performance Thermique :**")
-                # --- 5. SECTION DIAGNOSTIC INTELLIGENT ---
-    st.header("📝 Diagnostic et Commentaires d'Expert")
-    
-    for i in range(len(df_daily)):
-        # On extrait les valeurs scalaires proprement
-        dt = float(df_daily.loc[i, 'Delta T'])
-        evap = float(df_daily.loc[i, 'Evap_m3_h'])
-        date_label = df_daily.loc[i, 'time'].strftime('%d/%m/%Y')
-        
-        with st.expander(f"Analyse du {date_label}"):
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.write(f"**Performance Thermique :**")
-                # Maintenant dt est un float, la comparaison fonctionne :
-                if 8.0 <= dt <= 10.0:
-                    st.success(f"✅ Delta T optimal : {round(dt,2)}°C. Échange conforme au design.")
-                elif dt < 8.0:
-                    st.error(f"🚨 Delta T faible : {round(dt,2)}°C. Les 8 ventilateurs ne suffisent pas à évacuer la charge (Air trop chaud).")
-                else:
-                    st.warning(f"🌡️ Delta T élevé : {round(dt,2)}°C. Refroidissement intense dû à un air très sec.")
-            
-            with col_b:
-                st.write(f"**Analyse de l'eau :**")
-                seuil_critique = L_FIXE * 0.015
-                if evap > seuil_critique:
-                    st.error(f"💧 Perte par évaporation élevée : {round(evap,1)} m³/h.")
-                else:
-                    st.info(f"💧 Évaporation normale : {round(evap,1)} m³/h.")
+    # --- DIAGNOSTIC AUTOMATIQUE ---
+    st.header("📝 Diagnostic Automatique du Jour")
+    current_dt = float(df_daily.iloc[-1]['Delta T'])
+    current_evap = float(df_daily.iloc[-1]['Evap_m3_h'])
 
-    # --- 6. VISUALISATIONS ---
-    st.header("📈 Graphiques d'Analyse")
-    
-    # Graphique Températures
-    fig_temp = go.Figure()
-    fig_temp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_reel'], name="Sortie Réelle", line=dict(color='blue')))
-    if 'T_w_out_predite' in df.columns:
-        fig_temp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_predite'], name="Sortie Prédite (IA)", line=dict(dash='dash', color='orange')))
-    fig_temp.update_layout(title="Comparaison Températures de Sortie", yaxis_title="°C")
-    st.plotly_chart(fig_temp, use_container_width=True)
+    col_diag1, col_diag2 = st.columns(2)
+    with col_diag1:
+        if 8 <= current_dt <= 10:
+            st.success(f"✅ Delta T stable ({round(current_dt,1)}°C).")
+        else:
+            st.error(f"🚨 Anomalie Delta T ({round(current_dt,1)}°C) ! Vérifiez la charge thermique.")
 
-    # Graphique Évaporation Journalière
-    fig_evap = px.bar(df_daily, x='time', y='Evap_m3_h', title="Moyenne d'évaporation par jour (m³/h)", color='Evap_m3_h', color_continuous_scale='Blues')
-    st.plotly_chart(fig_evap, use_container_width=True)
+    with col_diag2:
+        if current_evap > 350: # Seuil d'alerte pour NOORo I
+            st.warning(f"💧 Évaporation élevée : {round(current_evap,1)} m³/h. Attention au niveau d'appoint.")
+        else:
+            st.info(f"💧 Consommation d'eau nominale : {round(current_evap,1)} m³/h.")
 
-    # --- 7. EXPORT ---
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Télécharger le rapport complet (.csv)", csv, "audit_nooro_final.csv", "text/csv")
+    # --- GRAPHIQUE ---
+    st.plotly_chart(px.line(df, x='time', y='Evap_m3_h', title="Flux d'évaporation (m³/h)"), use_container_width=True)
 
 else:
-    st.info("👋 Bienvenue. Veuillez charger votre fichier Excel pour lancer l'analyse automatique de la tour.")
+    # Si aucun fichier 'live_data.xlsx' n'est trouvé, on laisse l'option manuelle
+    st.warning("⚠️ Aucun flux de données en direct détecté. Veuillez charger un fichier pour tester.")
+    manual_file = st.file_uploader("Charger manuellement")
+    if manual_file:
+        # Enregistrer le fichier pour simuler le "Live"
+        with open("live_data.xlsx", "wb") as f:
+            f.write(manual_file.getbuffer())
+        st.rerun()

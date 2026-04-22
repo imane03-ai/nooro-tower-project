@@ -33,7 +33,7 @@ if uploaded_file is not None:
     
 # --- 1. PRÉDICTION IA POUR CHAQUE LIGNE ---
     if model_ai:
-    try:
+      try:
        # On sélectionne les colonnes nécessaires
        features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
             

@@ -22,7 +22,7 @@ def get_live_data():
     """
     # Pour le moment, l'outil cherche un fichier 'live_data.xlsx' sur votre GitHub
     # qui se mettrait à jour automatiquement via un script externe.
-    path = "live_data.xlsx" 
+    path = "live_data.xlsx.xlsx" 
     if os.path.exists(path):
         return pd.read_excel(path)
     else:
@@ -106,6 +106,6 @@ else:
     manual_file = st.file_uploader("Charger manuellement")
     if manual_file:
         # Enregistrer le fichier pour simuler le "Live"
-        with open("live_data.xlsx", "wb") as f:
+        with open("live_data.xlsx.xlsx", "wb") as f:
             f.write(manual_file.getbuffer())
         st.rerun()

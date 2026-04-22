@@ -105,12 +105,12 @@ fig_evap = px.bar(df_daily, x='time', y='Evap_m3_h', color_continuous_scale='Blu
 st.plotly_chart(fig_evap, use_container_width=True)
 
     # Tableau de données avec toutes les colonnes calculées
-    st.subheader("📋 Tableau des résultats calculés (Aperçu)")
-    st.write(df[['time', 'T_w_out_reel', 'T_w_out_predite', 'Delta T', 'Approche', 'Efficacite', 'Chaleur_Rejetee_MW']].tail(10))
+st.subheader("📋 Tableau des résultats calculés (Aperçu)")
+st.write(df[['time', 'T_w_out_reel', 'T_w_out_predite', 'Delta T', 'Approche', 'Efficacite', 'Chaleur_Rejetee_MW']].tail(10))
 
     # Bouton de téléchargement
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Télécharger le fichier complet avec calculs et prédictions", csv, "audit_nooro_complet.csv", "text/csv")
+csv = df.to_csv(index=False).encode('utf-8')
+st.download_button("📥 Télécharger le fichier complet avec calculs et prédictions", csv, "audit_nooro_complet.csv", "text/csv")
 
 else:
     st.info("Veuillez charger le fichier Excel dans la barre latérale pour démarrer l'audit.")

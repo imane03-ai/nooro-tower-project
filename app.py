@@ -40,8 +40,8 @@ if uploaded_file is not None:
        # ASTUCE : On convertit en valeurs brutes (numpy) pour éviter l'erreur de noms de colonnes
        df['T_w_out_predite'] = model_ai.predict(features.values)
             
-            st.sidebar.success("✅ Prédictions IA générées")
-        except Exception as e:
+       st.sidebar.success("✅ Prédictions IA générées")
+      except Exception as e:
             st.sidebar.error(f"Erreur colonnes : Vérifiez que votre Excel contient bien T_w_in, T_db, HR, L, G")
     
     # --- 2. CALCULS THERMODYNAMIQUES (10 MIN) ---

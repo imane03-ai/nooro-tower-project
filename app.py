@@ -24,92 +24,51 @@ model_ai = load_model()
 
 # --- BARRE LATÉRALE ---
 st.sidebar.header("📥 Importation des Données")
-uploaded_file = st.sidebar.file_uploader("Charger le fichier Excel de la centrale", type=['xlsx'])
+uploaded_file = st.sidebar.file_uploader("Charger le fichier Excel", type=['xlsx'])
 
 if uploaded_file is not None:
-    # Lecture des données
     df = pd.read_excel(uploaded_file)
     df['time'] = pd.to_datetime(df['time'])
     
-# --- 1. PRÉDICTION IA POUR CHAQUE LIGNE ---
     if model_ai:
-      try:
-       # On sélectionne les colonnes nécessaires
-       features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
-            
-       # ASTUCE : On convertit en valeurs brutes (numpy) pour éviter l'erreur de noms de colonnes
-       df['T_w_out_predite'] = model_ai.predict(features.values)
-            
-       st.sidebar.success("✅ Prédictions IA générées")
-      except Exception as e:
-            st.sidebar.error(f"Erreur colonnes : Vérifiez que votre Excel contient bien T_w_in, T_db, HR, L, G")
+        try:
+            features = df[['T_w_in', 'T_db', 'HR', 'L', 'G']]
+            df['T_w_out_predite'] = model_ai.predict(features.values)
+            st.sidebar.success("✅ Prédictions IA générées")
+        except:
+            st.sidebar.error("Vérifiez les colonnes de votre Excel")
     
-    # --- 2. CALCULS THERMODYNAMIQUES (10 MIN) ---
-    # Delta T (Saut thermique)
+    # Calculs
     df['Delta T'] = df['T_w_in'] - df['T_w_out_reel']
-    
-    # Température humide (Twb) - Formule de Stull
     T, Rh = df['T_db'], df['HR']
     df['Twb'] = T * np.arctan(0.151977 * (Rh + 8.313659)**0.5) + np.arctan(T + Rh) - np.arctan(Rh - 1.676331) + 0.00391838 * (Rh)**1.5 * np.arctan(0.023101 * Rh) - 4.686035
-    
-    # Approche et Efficacité
     df['Approche'] = df['T_w_out_reel'] - df['Twb']
     df['Efficacite'] = (df['Delta T'] / (df['Delta T'] + df['Approche'])) * 100
-    
-    # Chaleur Rejetée Q (MW) = m * Cp * DeltaT / 3600 (pour passer de kJ/h à MW)
-    # Cp eau = 4.186 kJ/kg.K, Masse volumique env 1000 kg/m3
     df['Chaleur_Rejetee_MW'] = (df['L'] * 4.186 * df['Delta T']) / 3600
-    
-    # Évaporation (m3/h)
     df['Evap_m3_h'] = 0.00153 * df['L'] * df['Delta T'] * 0.001
 
-    # --- 3. ANALYSE JOURNALIÈRE ---
-    df_daily = df.set_index('time').resample('D').agg({
-        'Evap_m3_h': 'sum',
-        'Chaleur_Rejetee_MW': 'mean',
-        'Efficacite': 'mean'
-    }).reset_index()
+    df_daily = df.set_index('time').resample('D').agg({'Evap_m3_h': 'sum', 'Chaleur_Rejetee_MW': 'mean', 'Efficacite': 'mean'}).reset_index()
 
-    # --- 4. AFFICHAGE DES RÉSULTATS ---
-    # KPIs de synthèse
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Efficacité Moyenne", f"{round(df['Efficacite'].mean(), 1)} %")
-    kpi2.metric("Chaleur Moyenne", f"{round(df['Chaleur_Rejetee_MW'].mean(), 2)} MW")
-    kpi3.metric("Approche Moyenne", f"{round(df['Approche'].mean(), 2)} °C")
-    kpi4.metric("Eau évaporée (Total)", f"{round(df['Evap_m3_h'].sum()*(10/60), 0)} m³")
+    # Affichage KPIs
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Efficacité Moyenne", f"{round(df['Efficacite'].mean(), 1)} %")
+    k2.metric("Chaleur Moyenne", f"{round(df['Chaleur_Rejetee_MW'].mean(), 2)} MW")
+    k3.metric("Approche Moyenne", f"{round(df['Approche'].mean(), 2)} °C")
+    k4.metric("Eau évaporée (Total)", f"{round(df['Evap_m3_h'].sum()*(10/60), 0)} m³")
 
-    # Graphique de comparaison Réel vs Prédit
-    st.subheader("🎯 Précision du Modèle : Température de Sortie Réelle vs Prédite")
+    # Graphes
+    st.subheader("🎯 Comparaison Réel vs Prédit")
     fig_comp = go.Figure()
-    fig_comp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_reel'], name="Réel", line=dict(color='blue')))
+    fig_comp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_reel'], name="Réel"))
     if 'T_w_out_predite' in df.columns:
-        fig_comp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_predite'], name="Prédit (IA)", line=dict(color='orange', dash='dash')))
+        fig_comp.add_trace(go.Scatter(x=df['time'], y=df['T_w_out_predite'], name="IA", line=dict(dash='dash')))
     st.plotly_chart(fig_comp, use_container_width=True)
-    # À ajouter dans votre code après les prédictions
-    df['Erreur'] = df['T_w_out_reel'] - df['T_w_out_predite']
-    MAE = df['Erreur'].abs().mean()
-    st.metric("Erreur Moyenne du Modèle (MAE)", f"{round(MAE, 2)} °C")
-    # À ajouter sous votre graphique de comparaison
-    st.subheader("📊 Distribution de l'Erreur de Prédiction")
-    df['Erreur_Absolue'] = (df['T_w_out_reel'] - df['T_w_out_predite']).abs()
 
-fig_err = px.histogram(df, x=(df['T_w_out_reel'] - df['T_w_out_predite']), 
-                       nbins=50, title="Répartition des écarts (Réel - Prédit)",
-                       labels={'x': 'Écart en °C'},
-                       color_discrete_sequence=['indianred'])
-st.plotly_chart(fig_err, use_container_width=True)
+    st.subheader("💧 Évaporation Journalière (m³)")
+    st.plotly_chart(px.bar(df_daily, x='time', y='Evap_m3_h'), use_container_width=True)
 
-# Graphique Évaporation par jour
-st.subheader("💧 Évaporation Totale Cumulée par Jour (m³)")
-fig_evap = px.bar(df_daily, x='time', y='Evap_m3_h', color_continuous_scale='Blues')
-st.plotly_chart(fig_evap, use_container_width=True)
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Télécharger les résultats", csv, "audit_nooro.csv", "text/csv")
 
-    # Tableau de données avec toutes les colonnes calculées
-st.subheader("📋 Tableau des résultats calculés (Aperçu)")
-st.write(df[['time', 'T_w_out_reel', 'T_w_out_predite', 'Delta T', 'Approche', 'Efficacite', 'Chaleur_Rejetee_MW']].tail(10))
-
-    # Bouton de téléchargement
-csv = df.to_csv(index=False).encode('utf-8')
-st.download_button("📥 Télécharger le fichier complet avec calculs et prédictions", csv, "audit_nooro_complet.csv", "text/csv")
-      else:
- st.info("Veuillez charger le fichier Excel dans la barre latérale pour démarrer l'audit.")
+else:
+    st.info("Veuillez charger le fichier Excel pour démarrer.")

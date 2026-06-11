@@ -66,98 +66,13 @@ if df is not None:
         'Efficacite': 'mean'
     }).reset_index()
 
-  # --- AFFICHAGE KPIs ---
-last_val = df.iloc[-1]
-
-niv_col = "niveaux de bassin 1 dans CT %"
-
-m1, m2, m3, m4, m5 = st.columns(5)
-
-m1.metric("Delta T Actuel", f"{last_val['Delta T']:.2f} °C")
-m2.metric("Évaporation", f"{last_val['Evap_m3_h']:.1f} m³/h")
-m3.metric("Efficacité", f"{last_val['Efficacite']:.1f} %")
-m4.metric("Approche", f"{last_val['Approche']:.2f} °C")
-
-if niv_col in df.columns:
-
-    niveau_actuel = df[niv_col].iloc[-1]
-
-    m5.metric(
-        "Niveau Bassin CT",
-        f"{niveau_actuel:.1f} %"
-    )
-
-    st.header("🏊 Niveau du Bassin CT en Temps Réel")
-
-    fig_gauge = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=niveau_actuel,
-            title={"text": "Niveau Bassin (%)"},
-            gauge={
-                "axis": {"range": [0, 100]},
-                "steps": [
-                    {"range": [0, 30], "color": "red"},
-                    {"range": [30, 60], "color": "orange"},
-                    {"range": [60, 100], "color": "green"},
-                ],
-            },
-        )
-    )
-
-    st.plotly_chart(fig_gauge, use_container_width=True)
-
-    df["Perte_eau_jour"] = df["Evap_m3_h"] * 24
-    perte_jour = df["Perte_eau_jour"].iloc[-1]
-
-    st.metric(
-        "Perte d'eau estimée / jour",
-        f"{perte_jour:.0f} m³/j"
-    )
-
-    st.header("💧 Diagnostic des Pertes d'Eau")
-
-    evap = df["Evap_m3_h"].iloc[-1]
-
-    if evap < 200:
-        st.success("✅ Consommation d'eau normale.")
-    elif evap < 350:
-        st.warning("⚠️ Consommation d'eau modérée.")
-    else:
-        st.error("🚨 Consommation d'eau élevée.")
-
-    st.header("📊 Niveau du Bassin et Évaporation")
-
-    fig_niveau = go.Figure()
-
-    fig_niveau.add_trace(
-        go.Scatter(
-            x=df["time"],
-            y=df[niv_col],
-            name="Niveau Bassin (%)"
-        )
-    )
-
-    fig_niveau.add_trace(
-        go.Scatter(
-            x=df["time"],
-            y=df["Evap_m3_h"],
-            name="Évaporation (m³/h)",
-            yaxis="y2"
-        )
-    )
-
-    fig_niveau.update_layout(
-        yaxis=dict(title="Niveau (%)"),
-        yaxis2=dict(
-            title="Évaporation (m³/h)",
-            overlaying="y",
-            side="right"
-        ),
-        height=500
-    )
-
-    st.plotly_chart(fig_niveau, use_container_width=True)
+    # --- AFFICHAGE KPIs ---
+    last_val = df.iloc[-1]
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Delta T Actuel", f"{round(last_val['Delta T'], 2)} °C")
+    m2.metric("Évaporation Actuelle", f"{round(last_val['Evap_m3_h'], 1)} m³/h")
+    m3.metric("Efficacité", f"{round(last_val['Efficacite'], 1)} %")
+    m4.metric("Approche", f"{round(last_val['Approche'], 2)} °C")
 
     # --- DIAGNOSTIC PAR JOUR (AVEC DATE) ---
     st.header("📝 Diagnostic et Commentaires d'Expert")
@@ -205,3 +120,4 @@ else:
     if uploaded:
         df_test = pd.read_excel(uploaded)
         st.success("Fichier chargé avec succès. Nommez-le 'live_data.xlsx.xlsx' sur GitHub pour l'automatisme.")
+tu peut ajouter a ce code selon l'excel l'afficahge de  niveau du bassin de CT 

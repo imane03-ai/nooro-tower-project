@@ -414,7 +414,7 @@ for _, row in df_daily.iterrows():
         title="Consommation d'eau"
     )
 
-   st.plotly_chart(
+    st.plotly_chart(
     fig_evap,
     use_container_width=True,
     key="graph_evaporation"

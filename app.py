@@ -198,9 +198,9 @@ if df is not None:
     )
 
     if niveau_col:
-    m5.metric(
-    "Niveau Bassin",
-    f"{last_val[niveau_col]:.1f} %"
+        m5.metric(
+        "Niveau Bassin",
+        f"{last_val[niveau_col]:.1f} %"
       
     )
 

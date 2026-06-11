@@ -251,10 +251,10 @@ if df is not None:
             )
 
             st.plotly_chart(
-                fig_gauge,
-                use_container_width=True
-            )
-
+    fig_gauge,
+    use_container_width=True,
+    key="jauge_bassin"
+)
         with c2:
 
             fig_level = px.line(
@@ -264,10 +264,11 @@ if df is not None:
                 title="Évolution du niveau du bassin"
             )
 
-            st.plotly_chart(
-                fig_level,
-                use_container_width=True
-            )
+           st.plotly_chart(
+    fig_level,
+    use_container_width=True,
+    key="courbe_bassin"
+)
 
         if niveau_actuel < 20:
             st.error(
@@ -301,11 +302,9 @@ if df is not None:
         .reset_index()
     )
 
-    # ===============================================
-    # DIAGNOSTICS
-    # ===============================================
+    
 
-    # ===============================================
+# ===============================================
 # DIAGNOSTICS
 # ===============================================
 
@@ -394,9 +393,10 @@ for _, row in df_daily.iterrows():
         )
 
     st.plotly_chart(
-        fig_temp,
-        use_container_width=True
-    )
+    fig_temp,
+    use_container_width=True,
+    key="graph_temperature"
+)
 
     # ===============================================
     # ÉVAPORATION
@@ -413,10 +413,11 @@ for _, row in df_daily.iterrows():
         title="Consommation d'eau"
     )
 
-    st.plotly_chart(
-        fig_evap,
-        use_container_width=True
-    )
+   st.plotly_chart(
+    fig_evap,
+    use_container_width=True,
+    key="graph_evaporation"
+)
 
 # ==================================================
 # PAS DE DONNÉES

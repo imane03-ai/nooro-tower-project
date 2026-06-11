@@ -265,7 +265,7 @@ if df is not None:
                 title="Évolution du niveau du bassin"
             )
 
-           st.plotly_chart(
+            st.plotly_chart(
     fig_level,
     use_container_width=True,
     key="courbe_bassin"

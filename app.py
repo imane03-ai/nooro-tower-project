@@ -100,7 +100,14 @@ if df is not None:
     # ===============================================
     # CALCULS
     # ===============================================
-
+    df = df.dropna(
+    subset=[
+        "T_w_in",
+        "T_w_out_reel",
+        "T_db",
+        "HR"
+    ]
+    )
     df["Delta T"] = df["T_w_in"] - df["T_w_out_reel"]
 
     T = df["T_db"]
@@ -298,36 +305,55 @@ if df is not None:
     # DIAGNOSTICS
     # ===============================================
 
-    st.header(
-        "📝 Diagnostic et Commentaires d'Expert"
-    )
+    # ===============================================
+# DIAGNOSTICS
+# ===============================================
 
-    for _, row in df_daily.iterrows():
+st.header(
+    "📝 Diagnostic et Commentaires d'Expert"
+)
 
-        date_str = row["time"].strftime(
-            "%d/%m/%Y"
-        )
+for _, row in df_daily.iterrows():
 
-        with st.expander(
-            f"📅 Rapport du {date_str}"
-        ):
+    # Ignorer les lignes sans date
+    if pd.isna(row["time"]):
+        continue
 
+    date_str = row["time"].strftime("%d/%m/%Y")
+
+    dt = row["Delta T"]
+    evap = row["Evap_m3_h"]
+
+    with st.expander(
+        f"📅 Rapport du {date_str}"
+    ):
+
+        if pd.notna(dt):
             st.write(
-                f"**Delta T moyen :** "
-                f"{row['Delta T']:.2f} °C"
+                f"**Delta T moyen :** {dt:.2f} °C"
+            )
+        else:
+            st.write(
+                "**Delta T moyen :** Non disponible"
             )
 
+        if pd.notna(evap):
             st.write(
-                f"**Évaporation moyenne :** "
-                f"{row['Evap_m3_h']:.1f} m³/h"
+                f"**Évaporation moyenne :** {evap:.1f} m³/h"
+            )
+        else:
+            st.write(
+                "**Évaporation moyenne :** Non disponible"
             )
 
-            if 8 <= row["Delta T"] <= 10:
+        if pd.notna(dt):
+
+            if 8 <= dt <= 10:
                 st.success(
                     "✅ Delta T optimal"
                 )
 
-            elif row["Delta T"] < 8:
+            elif dt < 8:
                 st.error(
                     "🚨 Delta T trop faible"
                 )
@@ -336,7 +362,6 @@ if df is not None:
                 st.warning(
                     "🌡️ Delta T élevé"
                 )
-
     # ===============================================
     # TEMPÉRATURES
     # ===============================================

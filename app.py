@@ -199,7 +199,7 @@ if df is not None:
 
     if niveau_col:
         m5.metric(
-        "Niveau Bassin",
+            "Niveau Bassin",
         f"{last_val[niveau_col]:.1f} %"
       
     )
@@ -252,10 +252,10 @@ if df is not None:
             )
 
             st.plotly_chart(
-    fig_gauge,
-    use_container_width=True,
-    key="jauge_bassin"
-)
+                fig_gauge,
+                use_container_width=True,
+                key="jauge_bassin"
+            )
         with c2:
 
             fig_level = px.line(
@@ -266,10 +266,10 @@ if df is not None:
             )
 
             st.plotly_chart(
-    fig_level,
-    use_container_width=True,
-    key="courbe_bassin"
-)
+                fig_level,
+                use_container_width=True,
+                key="courbe_bassin"
+            )
 
         if niveau_actuel < 20:
             st.error(
@@ -302,66 +302,94 @@ if df is not None:
         })
         .reset_index()
     )
+    # ===============================================
+    # DIAGNOSTICS
+    # ===============================================
 
-    
+    st.header("📝 Diagnostic et Commentaires d'Expert")
 
-# ===============================================
-# DIAGNOSTICS
-# ===============================================
+    for _, row in df_daily.iterrows():
 
-st.header(
-    "📝 Diagnostic et Commentaires d'Expert"
-)
+        if pd.isna(row["time"]):
+            continue
 
-for _, row in df_daily.iterrows():
+        date_str = row["time"].strftime("%d/%m/%Y")
 
-    # Ignorer les lignes sans date
-    if pd.isna(row["time"]):
-        continue
+        dt = row["Delta T"]
+        evap = row["Evap_m3_h"]
 
-    date_str = row["time"].strftime("%d/%m/%Y")
+        with st.expander(f"📅 Rapport du {date_str}"):
 
-    dt = row["Delta T"]
-    evap = row["Evap_m3_h"]
-
-    with st.expander(
-        f"📅 Rapport du {date_str}"
-    ):
-
-        if pd.notna(dt):
-            st.write(
-                f"**Delta T moyen :** {dt:.2f} °C"
-            )
-        else:
-            st.write(
-                "**Delta T moyen :** Non disponible"
-            )
-
-        if pd.notna(evap):
-            st.write(
-                f"**Évaporation moyenne :** {evap:.1f} m³/h"
-            )
-        else:
-            st.write(
-                "**Évaporation moyenne :** Non disponible"
-            )
-
-        if pd.notna(dt):
-
-            if 8 <= dt <= 10:
-                st.success(
-                    "✅ Delta T optimal"
-                )
-
-            elif dt < 8:
-                st.error(
-                    "🚨 Delta T trop faible"
-                )
-
+            if pd.notna(dt):
+                st.write(f"**Delta T moyen :** {dt:.2f} °C")
             else:
-                st.warning(
-                    "🌡️ Delta T élevé"
-                )
+                st.write("**Delta T moyen :** Non disponible")
+
+            if pd.notna(evap):
+                st.write(f"**Évaporation moyenne :** {evap:.1f} m³/h")
+            else:
+                st.write("**Évaporation moyenne :** Non disponible")
+
+            if pd.notna(dt):
+
+                if 8 <= dt <= 10:
+                    st.success("✅ Delta T optimal")
+
+                elif dt < 8:
+                    st.error("🚨 Delta T trop faible")
+
+                else:
+                    st.warning("🌡️ Delta T élevé")
+
+    # ===============================================
+    # TEMPÉRATURES
+    # ===============================================
+
+    st.header("📈 Suivi des Températures")
+
+    fig_temp = go.Figure()
+
+    fig_temp.add_trace(
+        go.Scatter(
+            x=df["time"],
+            y=df["T_w_out_reel"],
+            name="Réelle"
+        )
+    )
+
+    if "T_w_out_predite" in df.columns:
+
+        fig_temp.add_trace(
+            go.Scatter(
+                x=df["time"],
+                y=df["T_w_out_predite"],
+                name="IA",
+                line=dict(dash="dash")
+            )
+        )
+
+    st.plotly_chart(
+        fig_temp,
+        use_container_width=True
+    )
+
+    # ===============================================
+    # ÉVAPORATION
+    # ===============================================
+
+    st.header("💧 Flux d'Évaporation")
+
+    fig_evap = px.line(
+        df,
+        x="time",
+        y="Evap_m3_h",
+        title="Consommation d'eau"
+    )
+
+    st.plotly_chart(
+        fig_evap,
+        use_container_width=True
+    )
     # ===============================================
     # TEMPÉRATURES
     # ===============================================

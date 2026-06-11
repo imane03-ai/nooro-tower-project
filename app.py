@@ -198,10 +198,11 @@ if df is not None:
     )
 
     if niveau_col:
-        m5.metric(
-            "Niveau Bassin",
-            f"{last_val[niveau_col]:.1f} %"
-        )
+    m5.metric(
+    "Niveau Bassin",
+    f"{last_val[niveau_col]:.1f} %"
+      
+    )
 
     # ===============================================
     # BASSIN CT
@@ -396,7 +397,7 @@ for _, row in df_daily.iterrows():
     fig_temp,
     use_container_width=True,
     key="graph_temperature"
-)
+    )
 
     # ===============================================
     # ÉVAPORATION
@@ -417,7 +418,7 @@ for _, row in df_daily.iterrows():
     fig_evap,
     use_container_width=True,
     key="graph_evaporation"
-)
+    )
 
 # ==================================================
 # PAS DE DONNÉES

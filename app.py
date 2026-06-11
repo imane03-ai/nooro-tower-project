@@ -120,4 +120,3 @@ else:
     if uploaded:
         df_test = pd.read_excel(uploaded)
         st.success("Fichier chargé avec succès. Nommez-le 'live_data.xlsx.xlsx' sur GitHub pour l'automatisme.")
-tu peut ajouter a ce code selon l'excel l'afficahge de  niveau du bassin de CT 

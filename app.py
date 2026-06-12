@@ -6,6 +6,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 import os
 from streamlit_autorefresh import st_autorefresh
+st_autorefresh(
+    interval=600000,
+    key="refresh"
+)
 
 # ==================================================
 # CONFIGURATION

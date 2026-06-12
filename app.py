@@ -7,10 +7,6 @@ import plotly.express as px
 import os
 from streamlit_autorefresh import st_autorefresh
 from supabase import create_client
-st_autorefresh(
-    interval=600000,
-    key="refresh"
-)
 
 # ==================================================
 # CONFIGURATION
@@ -57,22 +53,37 @@ model_ai = load_model()
 # CHARGEMENT DONNÉES
 # ==================================================
 
-def get_data():
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
-    fichiers = [
-        "live_data.xlsx",
-        "Live_data.xlsx",
-        "live_data.xlsx.xlsx"
-    ]
+supabase = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
 
-    for file in fichiers:
-        if os.path.exists(file):
-            return pd.read_excel(file)
+response = (
+    supabase
+    .table("mesures")
+    .select("*")
+    .order("time", desc=False)
+    .execute()
+)
 
-    return None
+df = pd.DataFrame(response.data)
 
-df = get_data()
+df = df.sort_values("time")
 
+last_val = df.iloc[-1]
+
+st.write("Dernière date :", last_val["time"])
+
+st.write("Dernier niveau bassin :", last_val.get("niveau_bassin"))
+
+st.write("Nombre de lignes :", len(df))
+
+st.write("Dernière mesure :")
+
+st.dataframe(df.tail())
 # ==================================================
 # SI DONNÉES DISPONIBLES
 # ==================================================
@@ -199,8 +210,8 @@ if df is not None:
 
     niveau_col = None
 
-    if "niveaux de bassin 1 dans CT %" in df.columns:
-        niveau_col = "niveaux de bassin 1 dans CT %"
+    if "niveau_bassin" in df.columns:
+        niveau_col = "niveau_bassin"
 
     a1, a2, a3, a4 = st.columns(4)
 

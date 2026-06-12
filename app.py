@@ -61,15 +61,23 @@ supabase = create_client(
     SUPABASE_KEY
 )
 
-response = (
-    supabase
-    .table("mesures")
-    .select("*")
-    .order("time", desc=False)
-    .execute()
-)
+try:
 
-df = pd.DataFrame(response.data)
+    response = (
+        supabase
+        .table("mesures")
+        .select("*")
+        .order("time")
+        .execute()
+    )
+
+    df = pd.DataFrame(response.data)
+
+except Exception as e:
+
+    st.error(f"Erreur Supabase : {e}")
+
+    st.stop()
 
 df = df.sort_values("time")
 

@@ -423,12 +423,12 @@ if df is not None:
 
     st.info(diagnostic)
 
-          st.header("📝 Diagnostic et Commentaires d'Expert")
+    st.header("📝 Diagnostic et Commentaires d'Expert")
 
-       for _, row in df_daily.iterrows():
+    for _, row in df_daily.iterrows():
 
-         if pd.isna(row["time"]):
-              continue
+        if pd.isna(row["time"]):
+            continue
 
         date_str = row["time"].strftime("%d/%m/%Y")
 

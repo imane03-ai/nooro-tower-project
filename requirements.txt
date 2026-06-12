@@ -1,8 +1,8 @@
 streamlit
 pandas
-xgboost
-scikit-learn
-openpyxl
+numpy
 plotly
-coolprop
+supabase
 streamlit-autorefresh
+xgboost
+openpyxl

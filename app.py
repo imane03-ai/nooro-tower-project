@@ -509,63 +509,6 @@ if df is not None:
         fig_evap,
         use_container_width=True
     )
-    # ===============================================
-    # TEMPÉRATURES
-    # ===============================================
-
-    st.header(
-        "📈 Suivi des Températures"
-    )
-
-    fig_temp = go.Figure()
-
-    fig_temp.add_trace(
-        go.Scatter(
-            x=df["time"],
-            y=df["T_w_out_reel"],
-            name="Réelle"
-        )
-    )
-
-    if "T_w_out_predite" in df.columns:
-
-        fig_temp.add_trace(
-            go.Scatter(
-                x=df["time"],
-                y=df["T_w_out_predite"],
-                name="IA",
-                line=dict(
-                    dash="dash"
-                )
-            )
-        )
-
-    st.plotly_chart(
-    fig_temp,
-    use_container_width=True,
-    key="graph_temperature"
-    )
-
-    # ===============================================
-    # ÉVAPORATION
-    # ===============================================
-
-    st.header(
-        "💧 Flux d'Évaporation"
-    )
-
-    fig_evap = px.line(
-        df,
-        x="time",
-        y="Evap_m3_h",
-        title="Consommation d'eau"
-    )
-
-    st.plotly_chart(
-    fig_evap,
-    use_container_width=True,
-    key="graph_evaporation"
-    )
 
 # ==================================================
 # PAS DE DONNÉES

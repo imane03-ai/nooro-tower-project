@@ -218,12 +218,14 @@ if df is not None:
         "T° Air",
          f"{last_val['T_db']:.2f} °C"
     )
-
+    
+    m1, m2, m3, m4, m5 = st.columns(5)
+    
     m1.metric(
-        "Delta T Actuel",
-        f"{last_val['Delta T']:.2f} °C"
+         "Delta T Actuel",
+          f"{last_val['Delta T']:.2f} °C"
     )
-
+    
     m2.metric(
         "Évaporation",
         f"{last_val['Evap_m3_h']:.1f} m³/h"

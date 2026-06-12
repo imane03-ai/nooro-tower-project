@@ -5,6 +5,7 @@ import xgboost as xgb
 import plotly.graph_objects as go
 import plotly.express as px
 import os
+from streamlit_autorefresh import st_autorefresh
 
 # ==================================================
 # CONFIGURATION
@@ -17,6 +18,10 @@ st.set_page_config(
 
 st.title("🛰️ Système de Suivi en Temps Réel - NOORo I")
 
+st_autorefresh(
+    interval=30000,
+    key="auto_refresh"
+)
 # ==================================================
 # PARAMÈTRES FIXES
 # ==================================================
@@ -157,6 +162,18 @@ if df is not None:
             df["T_w_out_predite"] = model_ai.predict(
                 features.values
             )
+            if "T_w_out_predite" in df.columns:
+
+                 erreur = abs(
+                      last_val["T_w_out_reel"]
+                      -
+                      last_val["T_w_out_predite"]
+            )
+
+            st.metric(
+               "Erreur IA",
+                    f"{erreur:.2f} °C"
+            )
 
         except Exception as e:
 
@@ -169,13 +186,38 @@ if df is not None:
     # ===============================================
 
     last_val = df.iloc[-1]
+    
+    st.sidebar.success(
+    f"Dernière mise à jour : "
+    f"{pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    )
 
     niveau_col = None
 
     if "niveaux de bassin 1 dans CT %" in df.columns:
         niveau_col = "niveaux de bassin 1 dans CT %"
 
-    m1, m2, m3, m4, m5 = st.columns(5)
+    a1, a2, a3, a4 = st.columns(4)
+
+    a1.metric(
+        "T° Entrée",
+        f"{last_val['T_w_in']:.2f} °C"
+    )
+
+    a2.metric(
+        "T° Sortie",
+         f"{last_val['T_w_out_reel']:.2f} °C"
+    )
+
+    a3.metric(
+        "Humidité",
+         f"{last_val['HR']:.1f} %"
+    )
+
+    a4.metric(
+        "T° Air",
+         f"{last_val['T_db']:.2f} °C"
+    )
 
     m1.metric(
         "Delta T Actuel",
@@ -204,6 +246,40 @@ if df is not None:
       
     )
 
+    # ==================================
+    # ALERTES AUTOMATIQUES
+    # ==================================
+
+    alertes = []
+
+    if last_val["Delta T"] < 8:
+        alertes.append("🚨 Delta T faible")
+
+    if last_val["Approche"] > 6:
+        alertes.append("⚠️ Approche élevée")
+
+    if last_val["Efficacite"] < 60:
+        alertes.append("⚠️ Efficacité faible")
+
+    if niveau_col:
+
+       if last_val[niveau_col] < 20:
+           alertes.append(
+            "🚨 Niveau du bassin critique"
+       )
+
+    st.header("🚨 Alertes")
+
+    if len(alertes) > 0:
+
+        for a in alertes:
+            st.error(a)
+
+    else:
+
+         st.success(
+              "✅ Aucun problème détecté"
+    )
     # ===============================================
     # BASSIN CT
     # ===============================================
@@ -305,13 +381,54 @@ if df is not None:
     # ===============================================
     # DIAGNOSTICS
     # ===============================================
+    # ==================================
+    # DIAGNOSTIC GLOBAL
+    # ==================================
 
-    st.header("📝 Diagnostic et Commentaires d'Expert")
+    st.header("🤖 Diagnostic IA")
 
-    for _, row in df_daily.iterrows():
+    diagnostic = ""
 
-        if pd.isna(row["time"]):
-            continue
+    if last_val["Delta T"] < 8:
+
+        diagnostic += (
+           "Refroidissement insuffisant. "
+        )
+
+    if last_val["Approche"] > 6:
+
+        diagnostic += (
+           "Possible encrassement du packing. "
+        )
+
+    if last_val["Efficacite"] < 60:
+
+         diagnostic += (
+            "Performance thermique faible. "
+         )
+
+    if niveau_col:
+
+       if last_val[niveau_col] < 30:
+
+           diagnostic += (
+              "Vérifier l'appoint d'eau. "
+           )
+
+    if diagnostic == "":
+
+        diagnostic = (
+           "Fonctionnement normal."
+        )
+
+    st.info(diagnostic)
+
+        st.header("📝 Diagnostic et Commentaires d'Expert")
+
+       for _, row in df_daily.iterrows():
+
+         if pd.isna(row["time"]):
+              continue
 
         date_str = row["time"].strftime("%d/%m/%Y")
 

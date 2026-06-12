@@ -423,7 +423,7 @@ if df is not None:
 
     st.info(diagnostic)
 
-        st.header("📝 Diagnostic et Commentaires d'Expert")
+          st.header("📝 Diagnostic et Commentaires d'Expert")
 
        for _, row in df_daily.iterrows():
 

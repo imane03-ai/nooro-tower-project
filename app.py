@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🛰️ Système de Monitoring en Temps Réel - NOORo I")
+st.title("🛰️ Système de Suivi en Temps Réel - NOORo I")
 
 # ==================================================
 # PARAMÈTRES FIXES

@@ -56,6 +56,9 @@ model_ai = load_model()
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
+st.write("URL utilisée :", SUPABASE_URL)
+st.write("Début clé :", SUPABASE_KEY[:20])
+
 supabase = create_client(
     SUPABASE_URL,
     SUPABASE_KEY

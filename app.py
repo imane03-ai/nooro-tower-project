@@ -7,6 +7,29 @@ import plotly.express as px
 import os
 from streamlit_autorefresh import st_autorefresh
 from supabase import create_client
+from supabase import create_client
+import streamlit as st
+import pandas as pd
+
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+
+supabase = create_client(url, key)
+
+try:
+    response = (
+        supabase
+        .table("mesures")
+        .select("*")
+        .limit(5)
+        .execute()
+    )
+
+    st.success("Connexion Supabase OK")
+    st.write(response.data)
+
+except Exception as e:
+    st.error(f"Erreur : {e}")
 
 # ==================================================
 # CONFIGURATION

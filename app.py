@@ -16,6 +16,8 @@ key = st.secrets["SUPABASE_KEY"]
 
 supabase = create_client(url, key)
 
+supabase.table("mesures")
+
 try:
     response = (
         supabase

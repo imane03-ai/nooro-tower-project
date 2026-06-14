@@ -45,7 +45,7 @@ st.set_page_config(
 st.title("🛰️ Système de Suivi en Temps Réel - NOORo I")
 
 st_autorefresh(
-    interval=30000,
+    interval=600000,
     key="auto_refresh"
 )
 # ==================================================

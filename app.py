@@ -76,6 +76,12 @@ model_ai = load_model()
 # CHARGEMENT DONNÉES
 # ==================================================
 
+df = pd.DataFrame(response.data)
+
+st.write("Colonnes :", df.columns.tolist())
+st.write("Nombre de lignes :", len(df))
+st.dataframe(df.head())
+
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
@@ -103,6 +109,15 @@ except Exception as e:
 
     st.error(f"Erreur Supabase : {e}")
 
+    st.stop()
+    
+
+if df.empty:
+    st.warning("Aucune donnée trouvée dans Supabase.")
+    st.stop()
+
+if "time" not in df.columns:
+    st.error(f"Colonne 'time' introuvable. Colonnes trouvées : {df.columns.tolist()}")
     st.stop()
 
 df = df.sort_values("time")
@@ -149,7 +164,7 @@ if df is not None:
     # ===============================================
     # Date
     # ===============================================
-
+    
     df["time"] = pd.to_datetime(df["time"])
 
     # ===============================================

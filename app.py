@@ -19,20 +19,20 @@ supabase = create_client(url, key)
 supabase.table("mesures")
 
 try:
+
     response = (
         supabase
         .table("mesures")
         .select("*")
-        .limit(5)
         .execute()
     )
 
-    st.success("Connexion Supabase OK")
+    st.write("Réponse brute Supabase :")
     st.write(response.data)
 
 except Exception as e:
-    st.error(f"Erreur : {e}")
 
+    st.error(f"Erreur : {e}")
 # ==================================================
 # CONFIGURATION
 # ==================================================
@@ -79,6 +79,8 @@ model_ai = load_model()
 # ==================================================
 
 df = pd.DataFrame(response.data)
+st.write("Colonnes trouvées :")
+st.write(df.columns.tolist())
 
 st.write("Colonnes :", df.columns.tolist())
 st.write("Nombre de lignes :", len(df))

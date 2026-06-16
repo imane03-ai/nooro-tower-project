@@ -263,6 +263,12 @@ if df is not None:
         f"{last_val[niveau_col]:.1f} %"
       
     )
+    for index, row in df.iterrows():
+
+    st.write(f"Temps : {row['time']}")
+    st.write(f"T° Entrée : {row['T_w_in']}")
+    st.write(f"T° Sortie : {row['T_w_out_reel']}")
+    st.write("---")
 
     # ==================================
     # ALERTES AUTOMATIQUES

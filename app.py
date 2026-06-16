@@ -201,7 +201,21 @@ if df is not None:
     # KPI
     # ===============================================
 
-    last_val = row
+    import time
+
+    if "start_time" not in st.session_state:
+       st.session_state.start_time = time.time()
+
+    elapsed_minutes = (
+       time.time() - st.session_state.start_time
+    ) / 60
+
+    index_ligne = int(elapsed_minutes / 10)
+
+    if index_ligne >= len(df):
+        index_ligne = len(df) - 1
+
+    last_val = df.iloc[index_ligne]
     
     st.sidebar.success(
     f"Dernière mise à jour : "
@@ -263,21 +277,6 @@ if df is not None:
         f"{last_val[niveau_col]:.1f} %"
       
     )
-    import time
-
-    if "start_time" not in st.session_state:
-         st.session_state.start_time = time.time()
-
-    elapsed_minutes = (
-          time.time() - st.session_state.start_time
-    ) / 60
-
-      index_ligne = int(elapsed_minutes / 10)
-
-    if index_ligne >= len(df):
-         index_ligne = len(df) - 1
-
-    row = df.iloc[index_ligne]
     # ==================================
     # ALERTES AUTOMATIQUES
     # ==================================

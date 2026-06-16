@@ -6,33 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import os
 from streamlit_autorefresh import st_autorefresh
-from supabase import create_client
-from supabase import create_client
-import streamlit as st
-import pandas as pd
 
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-
-supabase = create_client(url, key)
-
-supabase.table("mesures")
-
-try:
-
-    response = (
-        supabase
-        .table("mesures")
-        .select("*")
-        .execute()
-    )
-
-    st.write("Réponse brute Supabase :")
-    st.write(response.data)
-
-except Exception as e:
-
-    st.error(f"Erreur : {e}")
 # ==================================================
 # CONFIGURATION
 # ==================================================
@@ -45,7 +19,7 @@ st.set_page_config(
 st.title("🛰️ Système de Suivi en Temps Réel - NOORo I")
 
 st_autorefresh(
-    interval=600000,
+    interval=30000,
     key="auto_refresh"
 )
 # ==================================================
@@ -78,65 +52,22 @@ model_ai = load_model()
 # CHARGEMENT DONNÉES
 # ==================================================
 
-df = pd.DataFrame(response.data)
-st.write("Colonnes trouvées :")
-st.write(df.columns.tolist())
+def get_data():
 
-st.write("Colonnes :", df.columns.tolist())
-st.write("Nombre de lignes :", len(df))
-st.dataframe(df.head())
+    fichiers = [
+        "live_data.xlsx",
+        "Live_data.xlsx",
+        "live_data.xlsx.xlsx"
+    ]
 
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+    for file in fichiers:
+        if os.path.exists(file):
+            return pd.read_excel(file)
 
-st.write("URL utilisée :", SUPABASE_URL)
-st.write("Début clé :", SUPABASE_KEY[:20])
+    return None
 
-supabase = create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY
-)
+df = get_data()
 
-try:
-
-    response = (
-        supabase
-        .table("mesures")
-        .select("*")
-        .order("time")
-        .execute()
-    )
-
-    df = pd.DataFrame(response.data)
-
-except Exception as e:
-
-    st.error(f"Erreur Supabase : {e}")
-
-    st.stop()
-    
-
-if df.empty:
-    st.warning("Aucune donnée trouvée dans Supabase.")
-    st.stop()
-
-if "time" not in df.columns:
-    st.error(f"Colonne 'time' introuvable. Colonnes trouvées : {df.columns.tolist()}")
-    st.stop()
-
-df = df.sort_values("time")
-
-last_val = df.iloc[-1]
-
-st.write("Dernière date :", last_val["time"])
-
-st.write("Dernier niveau bassin :", last_val.get("niveau_bassin"))
-
-st.write("Nombre de lignes :", len(df))
-
-st.write("Dernière mesure :")
-
-st.dataframe(df.tail())
 # ==================================================
 # SI DONNÉES DISPONIBLES
 # ==================================================
@@ -168,7 +99,7 @@ if df is not None:
     # ===============================================
     # Date
     # ===============================================
-    
+
     df["time"] = pd.to_datetime(df["time"])
 
     # ===============================================
@@ -263,8 +194,8 @@ if df is not None:
 
     niveau_col = None
 
-    if "niveau_bassin" in df.columns:
-        niveau_col = "niveau_bassin"
+    if "niveaux de bassin 1 dans CT %" in df.columns:
+        niveau_col = "niveaux de bassin 1 dans CT %"
 
     a1, a2, a3, a4 = st.columns(4)
 

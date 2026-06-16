@@ -6,7 +6,23 @@ import plotly.graph_objects as go
 import plotly.express as px
 import os
 from streamlit_autorefresh import st_autorefresh
+import glob
+import os
 
+def get_latest_excel():
+
+    files = glob.glob("Data/*.xlsx")
+
+    if not files:
+        return None
+
+    latest_file = max(
+        files,
+        key=os.path.getctime
+    )
+
+    return pd.read_excel(latest_file)
+df = get_latest_excel()
 # ==================================================
 # CONFIGURATION
 # ==================================================
